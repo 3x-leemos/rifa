@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rifa - Lemos Suporte</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#9ca3af;--glass: rgba(255,255,255,0.03)}
+    *{box-sizing:border-box;font-family:Inter, system-ui, Arial, sans-serif}
+    body{margin:0;background:linear-gradient(180deg,#071029 0%, #081127 100%);color:#e6eef6;padding:18px}
+    .wrap{max-width:1100px;margin:0 auto}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between}
+    h1{font-size:20px;margin:0}
+    nav{display:flex;gap:8px}
+    a.nav{color:var(--accent);cursor:pointer;text-decoration:underline}
+    .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 6px 20px rgba(2,6,23,0.6);margin-top:12px}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+    input,select,textarea,button{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .row{display:flex;gap:8px}
+    .small{width:120px}
+    .numbers-list{display:flex;flex-wrap:wrap;gap:6px;padding-top:8px}
+    .num{background:var(--glass);padding:8px 10px;border-radius:6px;cursor:pointer;border:1px solid rgba(255,255,255,0.03)}
+    .num.sel{background:linear-gradient(90deg,var(--accent),#7c3aed)}
+    .num.blocked{opacity:0.45;cursor:not-allowed;text-decoration:line-through}
+    .btn{background:var(--accent);border:none;color:#052024;padding:10px 12px;border-radius:8px;cursor:pointer}
+    .muted{color:var(--muted);font-size:13px}
+    footer{margin-top:18px;font-size:13px;color:var(--muted)}
+    table{width:100%;border-collapse:collapse}
+    td,th{padding:6px;border-bottom:1px dashed rgba(255,255,255,0.03)}
+    .flex{display:flex;gap:8px}
+    .hidden{display:none}
+    #admin-pending{margin-top:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02)}
+    .small-input{width:48%}
+    .tabs{display:flex;gap:8px;margin-bottom:8px}
+    .tab{padding:8px 10px;border-radius:8px;cursor:pointer}
+    .tab.active{background:rgba(255,255,255,0.03)}
+    @media (max-width:980px){.wrap{padding:10px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Rifa - Lemos Suporte</h1>
+        <div class="muted">Cliente & Anunciante</div>
+      </div>
+      <nav>
+        <a class="nav" id="link-client">Cliente</a>
+        <a class="nav" id="link-result">Resultados</a>
+        <a class="nav" id="link-admin">Anunciante (conta)</a>
+      </nav>
+    </header>
+
+    <!-- PÁGINA CLIENTE -->
+    <main id="page-client" class="card">
+      <h2>Comprar Números — Cliente</h2>
+      <div class="muted">Selecione a campanha (apenas campanhas públicas aparecem)</div>
+
+      <label>Campanha</label>
+      <select id="client-campaign"></select>
+
+      <div style="margin-top:10px" id="client-area">
+        <label>Nome do comprador</label>
+        <input id="client-name" placeholder="Seu nome" />
+
+        <label>WhatsApp</label>
+        <input id="client-whats" placeholder="5511999999999" />
+
+        <label>Quantidade de números</label>
+        <input id="client-qty" type="number" min="1" value="1" />
+
+        <div style="margin-top:8px" class="flex">
+          <button id="client-gen" class="btn">Gerar / Escolher Números</button>
+          <button id="client-add-cart">Adicionar ao carrinho</button>
+        </div>
+
+        <div style="margin-top:12px">
+          <div class="muted">Números selecionados:</div>
+          <div id="client-numbers" class="numbers-list"></div>
+          <div class="muted">Valor total: R$ <span id="client-total">0.00</span></div>
+        </div>
+
+        <h3 style="margin-top:16px">Pagamento — PIX</h3>
+
+        <label>Chave PIX do anunciante</label>
+        <input id="client-pix-key" disabled />
+
+        <label>PIX Copia e Cola</label>
+        <textarea id="client-pix" rows="2" placeholder="PIX copia e cola"></textarea>
+
+        <div id="client-qrcode"></div>
+
+        <div style="margin-top:10px" class="flex">
+          <button id="client-generate-pix" class="btn">Gerar PIX</button>
+          <button id="client-finalize" class="btn">Finalizar (Simular pagamento)</button>
+        </div>
+      </div>
+
+      <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)" />
+
+      <h3>Carrinho (pendentes)</h3>
+      <div id="client-cart-list"></div>
+    </main>
+
+    <!-- RESULTADOS -->
+    <section id="page-result" class="card hidden">
+      <h2>Resultados das Campanhas</h2>
+      <label>Campanha</label>
+      <select id="result-campaign"></select>
+      <div style="margin-top:8px"><b>Último vencedor:</b> <span id="public-winner">--</span></div>
+    </section>
+
+    <!-- LOGIN / CADASTRO ADMIN -->
+    <section id="page-admin-auth" class="card hidden">
+      <h2>Entrar / Criar Conta (Anunciante)</h2>
+      <div class="tabs">
+        <div class="tab active" data-tab="login">Entrar</div>
+        <div class="tab" data-tab="create">Criar Conta</div>
+        <div class="tab" data-tab="recover">Recuperar Senha</div>
+      </div>
+
+      <div id="tab-login">
+        <label>Email ou Telefone</label>
+        <input id="login-identifier" placeholder="email@example.com ou 5511999999999" />
+        <label>Senha</label>
+        <input id="login-password" type="password" placeholder="Senha" />
+        <div style="margin-top:8px" class="flex"><button id="admin-login" class="btn">Entrar</button></div>
+      </div>
+
+      <div id="tab-create" class="hidden">
+        <label>Email (opcional)</label>
+        <input id="create-email" placeholder="email@example.com" />
+        <label>Telefone (opcional)</label>
+        <input id="create-phone" placeholder="5511999999999" />
+        <label>Senha (mín 6 caracteres)</label>
+        <input id="create-password" type="password" />
+        <label>Confirmar senha</label>
+        <input id="create-password2" type="password" />
+        <div style="margin-top:8px" class="flex"><button id="admin-create-account" class="btn">Criar Conta</button></div>
+      </div>
+
+      <div id="tab-recover" class="hidden">
+        <label>Email ou Telefone</label>
+        <input id="recover-identifier" placeholder="email@example.com ou 5511999999999" />
+        <div style="margin-top:8px" class="flex"><button id="admin-send-recovery" class="btn">Enviar Código de Recuperação</button></div>
+        <div id="recover-step2" class="hidden" style="margin-top:8px">
+          <label>Código</label>
+          <input id="recover-code" />
+          <label>Nova senha</label>
+          <input id="recover-new-password" type="password" />
+          <div style="margin-top:8px" class="flex"><button id="admin-verify-recovery" class="btn">Verificar e Trocar</button></div>
+        </div>
+      </div>
+
+      <div id="auth-msg" class="muted" style="margin-top:8px"></div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="page-admin" class="card hidden">
+      <h2>Painel do Anunciante</h2>
+
+      <div class="muted">Logado como: <span id="admin-logged-as">--</span></div>
+      <div style="margin-top:8px" class="flex">
+        <button id="admin-logout" class="btn">Sair</button>
+        <button id="admin-edit-account" class="btn">Editar Conta</button>
+      </div>
+
+      <h3 style="margin-top:12px">1) Criar / Configurar Campanha</h3>
+
+      <label>Nome</label>
+      <input id="adm-name" />
+
+      <label>Número máximo</label>
+      <input id="adm-max" type="number" min="1" value="100" />
+
+      <label>Valor por número (R$)</label>
+      <input id="adm-price" type="number" step="0.01" value="5.00" />
+
+      <label>Modo de escolha</label>
+      <select id="adm-mode">
+        <option value="manual">Manual</option>
+        <option value="random">Aleatório</option>
+      </select>
+
+      <label>Chave PIX da Campanha</label>
+      <input id="adm-pix" placeholder="Ex: email, telefone, aleatória" />
+
+      <div style="margin-top:8px" class="flex">
+        <button id="adm-create" class="btn">Criar Campanha</button>
+        <button id="adm-save" class="btn">Salvar Alterações</button>
+      </div>
+
+      <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)" />
+
+      <h3>2) Gerenciar Campanhas</h3>
+      <select id="adm-campaign-list" size="5" style="width:100%;margin-top:8px;height:120px"></select>
+
+      <div style="margin-top:8px" class="flex">
+        <button id="adm-open" class="btn">Abrir</button>
+        <button id="adm-delete" class="btn">Excluir</button>
+      </div>
+
+      <div id="adm-details" style="margin-top:12px" class="hidden">
+        <h4>Detalhes da campanha: <span id="adm-camp-name"></span></h4>
+
+        <div class="muted">Números vendidos: <span id="adm-sold-count">0</span></div>
+
+        <table style="margin-top:10px">
+          <thead>
+            <tr><th>Número</th><th>Comprador</th><th>Whats</th><th>Valor</th><th>Status</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="adm-sales-body"></tbody>
+        </table>
+
+        <div style="margin-top:10px" class="flex">
+          <button id="adm-export" class="btn">Exportar CSV</button>
+          <button id="adm-draw" class="btn">Sortear</button>
+        </div>
+
+        <div style="margin-top:8px">Último sorteado: <span id="adm-last-winner">--</span></div>
+
+        <!-- Lista de pendentes dentro dos detalhes (visível ao abrir) -->
+        <div id="admin-pending" class="hidden">
+          <h4>Pagamentos Pendentes</h4>
+          <ul id="admin-pending-list"></ul>
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="muted">&copy; 2025 Lemos Suporte. Todos os direitos reservados</footer>
+  </div>
+
+  <!-- SCRIPTS: único bloco organizado no final -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+  /* ----------------------------- UTIL / CRYPTO ----------------------------- */
+  const enc = new TextEncoder();
+  function randBytes(len=16){ const a=new Uint8Array(len); crypto.getRandomValues(a); return Array.from(a).map(b=>('00'+b.toString(16)).slice(-2)).join(''); }
+  async function deriveHash(password, salt){
+    // PBKDF2 -> 100k iterations SHA-256 -> base64
+    const keyMat = await crypto.subtle.importKey('raw', enc.encode(password), {name:'PBKDF2'}, false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({name:'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256'}, keyMat, 256);
+    const arr = new Uint8Array(bits);
+    let str=''; for(let i=0;i<arr.length;i++) str+=String.fromCharCode(arr[i]);
+    return btoa(str);
+  }
+
+  /* ----------------------------- STORAGE ----------------------------- */
+  const LS_USERS = 'rifa_users_v1';
+  const users = JSON.parse(localStorage.getItem(LS_USERS)||'[]');
+  function saveUsers(){ localStorage.setItem(LS_USERS, JSON.stringify(users)); }
+
+  /* ----------------------------- MAIN APP STORAGE ----------------------------- */
+  const LS = 'rifa_v2_campaigns';
+  let campaigns = JSON.parse(localStorage.getItem(LS) || '[]');
+  let currentAdminId = localStorage.getItem('rifa_current_admin') || null;
+  let state = { currentClientSelection: [], cart: [] };
+  const $ = id => document.getElementById(id);
+  const money = v => Number(v || 0).toFixed(2);
+  function save(){ localStorage.setItem(LS, JSON.stringify(campaigns)); }
+
+  /* ----------------------------- PAGE NAVIGATION ----------------------------- */
+  function showPage(pageId){
+    document.querySelectorAll('main, section').forEach(el => el.classList.add('hidden'));
+    const page = $(pageId);
+    if(page) page.classList.remove('hidden');
+  }
+
+  /* ----------------------------- AUTH UI TABS ----------------------------- */
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const tab = t.dataset.tab;
+    ['login','create','recover'].forEach(k=>{ const el = document.getElementById('tab-'+k); if(el) el.classList.toggle('hidden', k!==tab); });
+    $('auth-msg').innerText='';
+  }));
+
+  /* ----------------------------- NAVIGATION LINKS ----------------------------- */
+  $('link-client').addEventListener('click', () => {
+    if(!currentAdminId) showPage('page-client');
+    else alert('Saia da conta de anunciante primeiro');
+  });
+  $('link-result').addEventListener('click', () => showPage('page-result'));
+  $('link-admin').addEventListener('click', () => {
+    if(currentAdminId) showPage('page-admin');
+    else showPage('page-admin-auth');
+  });
+
+  /* ----------------------------- USER HELPERS ----------------------------- */
+  function findUserByIdentifier(identifier){ if(!identifier) return null; identifier = identifier.trim().toLowerCase(); return users.find(u => (u.email && u.email.toLowerCase()===identifier) || (u.phone && u.phone===identifier)); }
+
+  async function createUser({email,phone,password}){
+    if(!password || password.length<6) throw new Error('Senha deve ter ao menos 6 caracteres');
+    if(!email && !phone) throw new Error('Informe email ou telefone');
+    if(email && users.find(u=>u.email && u.email.toLowerCase()===email.toLowerCase())) throw new Error('Email já cadastrado');
+    if(phone && users.find(u=>u.phone && u.phone===phone)) throw new Error('Telefone já cadastrado');
+    const salt = randBytes(12);
+    const hash = await deriveHash(password, salt);
+    const id = 'u_'+Date.now()+'_'+Math.floor(Math.random()*9999);
+    const user = {id,email: email||null, phone: phone||null, passwordHash: hash, salt, createdAt: Date.now()};
+    users.push(user); saveUsers(); return user;
+  }
+
+  async function verifyLogin(identifier, password){ const u = findUserByIdentifier(identifier); if(!u) throw new Error('Usuário não encontrado'); const hash = await deriveHash(password, u.salt); if(hash!==u.passwordHash) throw new Error('Senha incorreta'); return u; }
+
+  /* ----------------------------- RECOVERY (simulado local) ----------------------------- */
+  function saveRecovery(userId, codeHash, salt, expiresAt){ localStorage.setItem('rifa_recovery_'+userId, JSON.stringify({codeHash,salt,expiresAt})); }
+  function loadRecovery(userId){ const v = localStorage.getItem('rifa_recovery_'+userId); return v?JSON.parse(v):null; }
+
+  async function sendRecoveryCode(identifier){ const u = findUserByIdentifier(identifier); if(!u) throw new Error('Usuário não encontrado'); const code = String(Math.floor(100000 + Math.random()*900000)); const salt = randBytes(8); const codeHash = await deriveHash(code, salt); const expiresAt = Date.now() + 10*60*1000; saveRecovery(u.id, codeHash, salt, expiresAt);
+    const masked = u.email ? u.email.replace(/(.{2})(.*)(@.*)/,'$1***$3') : (u.phone? u.phone.replace(/(.{3})(.*)(.{2})/,'$1***$3'): '—');
+    return {masked, code};
+  }
+
+  async function verifyRecoveryCode(identifier, code){ const u = findUserByIdentifier(identifier); if(!u) throw new Error('Usuário não encontrado'); const rec = loadRecovery(u.id); if(!rec) throw new Error('Nenhum código gerado'); if(Date.now()>rec.expiresAt) throw new Error('Código expirado'); const h = await deriveHash(code, rec.salt); if(h!==rec.codeHash) throw new Error('Código inválido'); return u; }
+
+  async function resetPassword(identifier, code, newPassword){ const u = await verifyRecoveryCode(identifier, code); if(!newPassword || newPassword.length<6) throw new Error('Senha inválida'); const salt = randBytes(12); const hash = await deriveHash(newPassword, salt); u.salt = salt; u.passwordHash = hash; saveUsers(); localStorage.removeItem('rifa_recovery_'+u.id); return u; }
+
+  /* ----------------------------- AUTH HANDLERS (UI) ----------------------------- */
+  $('admin-create-account').addEventListener('click', async ()=>{
+    try{
+      const email = ($('create-email').value||'').trim();
+      const phone = ($('create-phone').value||'').trim();
+      const p1 = $('create-password').value||'';
+      const p2 = $('create-password2').value||'';
+      if(p1!==p2) return $('auth-msg').innerText = 'Senhas não batem';
+      const user = await createUser({email: email||null, phone: phone||null, password: p1});
+      $('auth-msg').innerText = 'Conta criada. Faça login.';
+      $('login-identifier').value = email || phone || '';
+      document.querySelector('.tab[data-tab="login"]').click();
+    }catch(err){ $('auth-msg').innerText = err.message; }
+  });
+
+  $('admin-login').addEventListener('click', async ()=>{
+    try{
+      const id = ($('login-identifier').value||'').trim(); const pw = $('login-password').value||'';
+      const u = await verifyLogin(id, pw);
+      currentAdminId = u.id; localStorage.setItem('rifa_current_admin', currentAdminId);
+      $('auth-msg').innerText = 'Logado como '+(u.email||u.phone||u.id);
+      renderAdminCampaignList(); renderAdminPending(); $('admin-logged-as').innerText = u.email || u.phone || u.id;
+      showPage('page-admin');
+    }catch(err){ $('auth-msg').innerText = err.message; }
+  });
+
+  $('admin-logout').addEventListener('click', ()=>{ currentAdminId = null; localStorage.removeItem('rifa_current_admin'); showPage('page-admin-auth'); $('auth-msg').innerText='Desconectado'; });
+
+  $('admin-send-recovery').addEventListener('click', async ()=>{
+    try{
+      const id = ($('recover-identifier').value||'').trim(); const res = await sendRecoveryCode(id);
+      $('auth-msg').innerText = 'Código enviado para: '+res.masked+" (simulado). Código visível no console para teste.";
+      console.log('RECOVERY CODE (simulado):', res.code);
+      $('recover-step2').classList.remove('hidden');
+    }catch(err){ $('auth-msg').innerText = err.message; }
+  });
+
+  $('admin-verify-recovery').addEventListener('click', async ()=>{
+    try{
+      const id = ($('recover-identifier').value||'').trim(); const code = ($('recover-code').value||'').trim(); const npw = ($('recover-new-password').value||'').trim(); await resetPassword(id, code, npw); $('auth-msg').innerText = 'Senha alterada com sucesso. Faça login.'; document.querySelector('.tab[data-tab="login"]').click();
+    }catch(err){ $('auth-msg').innerText = err.message; }
+  });
+
+  /* ----------------------------- REST OF APP (campaigns, client flow, admin) ----------------------------- */
+  function renderClientCampaigns(){ const sel = $('client-campaign'); if(!sel) return; sel.innerHTML=''; campaigns.forEach((c,i)=>{ const opt = document.createElement('option'); opt.value=i; opt.textContent = c.name + ' (R$'+money(c.price)+')'; sel.appendChild(opt); }); updateClientPIX(); updateClientSelection(); }
+
+  function renderResultList(){ const sel = $('result-campaign'); if(!sel) return; sel.innerHTML=''; campaigns.forEach((c,i)=>{ const opt=document.createElement('option'); opt.value=i; opt.textContent=c.name; sel.appendChild(opt) }); sel.onchange = ()=>{ const idx = Number(sel.value); const c = campaigns[idx]; $('public-winner').innerText = c && c.lastWinner ? (c.lastWinner.number + ' — ' + (c.lastWinner.buyer||'—')) : '--'; }; if(campaigns.length) sel.value=0; sel.onchange(); }
+
+  function renderAdminCampaignList(){ const sel=$('adm-campaign-list'); if(!sel) return; sel.innerHTML=''; campaigns.forEach((c,i)=>{ const opt=document.createElement('option'); opt.value=i; opt.textContent = c.name + ' (max:'+c.max+')'; sel.appendChild(opt) }); }
+
+  function availableNumbers(camp){ const max = camp.max; const sold = new Map(); (camp.sales||[]).forEach(s=>{ if(s.status==='pago' || s.status==='pendente') sold.set(Number(s.number), s) }); const avail = []; for(let i=1;i<=max;i++){ if(!sold.has(i)) avail.push(i) } return avail; }
+
+  function updateClientPIX(){ const selIdx = Number($('client-campaign').value || 0); const camp = campaigns[selIdx]; if(!camp) return; const pixKey = $('client-pix-key'); if(pixKey) pixKey.value = camp.pix || ''; }
+
+  function updateClientSelection(){ const selIdx = Number($('client-campaign').value || 0); const camp = campaigns[selIdx]; if(!camp) return; const qty = Math.max(1, Number($('client-qty').value||1)); const mode = camp.mode || 'manual'; const container = $('client-numbers'); if(container) container.innerHTML=''; state.currentClientSelection = [];
+    if(mode==='random'){ const avail = availableNumbers(camp); for(let i=0;i<Math.min(qty, avail.length); i++){ const pick = avail.splice(Math.floor(Math.random()*avail.length),1)[0]; state.currentClientSelection.push(pick); } }
+    state.currentClientSelection.forEach(n=>{ const d=document.createElement('div'); d.className='num sel'; d.innerText=n; container.appendChild(d)});
+    const totalEl = $('client-total'); if(totalEl) totalEl.innerText = money((camp.price||0) * state.currentClientSelection.length);
+  }
+
+  function renderManualGrid(idx){ const camp = campaigns[idx]; const container = $('client-numbers'); if(!camp || !container) return; container.innerHTML=''; const max=camp.max; const avail = new Set(availableNumbers(camp)); for(let i=1;i<=Math.min(max,200); i++){ const b=document.createElement('div'); b.className='num'; b.innerText=i; if(!avail.has(i)) b.classList.add('blocked'); b.onclick = ()=>{ if(!avail.has(i)) return; if(b.classList.contains('sel')){ b.classList.remove('sel'); state.currentClientSelection = state.currentClientSelection.filter(x=>x!==i) } else { state.currentClientSelection.push(i); b.classList.add('sel') } const totalEl = $('client-total'); if(totalEl) totalEl.innerText = money((camp.price||0) * state.currentClientSelection.length); }; container.appendChild(b) } }
+
+  /* ----------------------------- CLIENT EVENT LISTENERS ----------------------------- */
+  $('client-campaign').addEventListener('change', () => { updateClientPIX(); state.currentClientSelection = []; const container = $('client-numbers'); if(container) container.innerHTML=''; updateClientSelection(); });
+  $('client-qty').addEventListener('change', () => updateClientSelection());
+
+  $('client-gen').addEventListener('click', ()=>{ const idx = Number($('client-campaign').value || 0); const camp = campaigns[idx]; if(!camp) return alert('Selecione campanha'); if(camp.mode==='random'){ updateClientSelection(); alert('Números gerados aleatoriamente.'); } else { renderManualGrid(idx); } })
+
+  $('client-add-cart').addEventListener('click', ()=>{ const idx = Number($('client-campaign').value || 0); const camp = campaigns[idx]; if(!camp) return alert('Selecione campanha'); if(state.currentClientSelection.length===0) return alert('Nenhum número selecionado'); const buyer = ($('client-name').value||'').trim() || 'Anonimo'; const whats = ($('client-whats').value||'').trim() || ''; state.currentClientSelection.forEach(n=>{ camp.sales.push({number:n,buyer:buyer,whats:whats,price:camp.price,status:'pendente',createdAt:Date.now()}) }); save(); renderClientCampaigns(); renderAdminCampaignList(); alert('Números adicionados como PENDENTES. O anunciante deverá confirmar o pagamento.'); state.currentClientSelection = []; const numbersEl = $('client-numbers'); if(numbersEl) numbersEl.innerHTML=''; const totalEl = $('client-total'); if(totalEl) totalEl.innerText='0.00'; renderClientCart(); })
+
+  $('client-generate-pix').addEventListener('click', ()=>{ const idx = Number($('client-campaign').value || 0); const camp = campaigns[idx]; if(!camp) return; const total = (camp.price||0) * (state.currentClientSelection.length||1); const chave = camp.pix || ''; if(!chave){ alert('Este anunciante não definiu a chave PIX ainda.'); return; } const pix = `Chave:${chave}
+Valor:R$${money(total)}
+Mensagem:Rifa ${camp.name}`; const pixEl = $('client-pix'); if(pixEl) pixEl.value = pix; const qrBox = $('client-qrcode'); if(qrBox) { qrBox.innerHTML = ''; new QRCode(qrBox, { text: pix, width: 160, height: 160 }); } })
+
+  $('client-finalize').addEventListener('click', ()=>{ alert('Compra finalizada em modo simulado. Os números permanecem como PENDENTES até o anunciante confirmar o pagamento.'); })
+
+  function renderClientCart(){ const list = $('client-cart-list'); if(!list) return; list.innerHTML=''; campaigns.forEach((c,i)=>{ (c.sales||[]).filter(s=>s.status==='pendente').forEach(s=>{ const div=document.createElement('div'); div.innerText = `${c.name} — Nº ${s.number} — ${s.buyer} — ${s.status}`; list.appendChild(div) }) }); }
+
+  /* ----------------------------- ADMIN FLOW ----------------------------- */
+  $('adm-create').addEventListener('click', ()=>{ try{ const name = ($('adm-name').value||'').trim() || ('Campanha '+(campaigns.length+1)); const max = Math.max(1, Number($('adm-max').value||100)); const price = Number($('adm-price').value||5); const mode = $('adm-mode').value; const pix = ($('adm-pix').value||'').trim() || ''; const c = {name, max, price, mode, pix, sales:[], lastWinner:null, createdAt:Date.now()}; campaigns.push(c); save(); renderAdminCampaignList(); renderClientCampaigns(); alert('Campanha criada') }catch(err){ alert(err.message) } })
+
+  $('adm-save').addEventListener('click', ()=>{ const idx = Number($('adm-campaign-list').value||0); const c = campaigns[idx]; if(!c) return alert('Selecione campanha'); c.name = ($('adm-name').value||'').trim() || c.name; c.max = Math.max(1, Number($('adm-max').value||c.max)); c.price = Number($('adm-price').value||c.price); c.mode = $('adm-mode').value; c.pix = ($('adm-pix').value||'').trim(); save(); renderAdminCampaignList(); renderClientCampaigns(); alert('Salvo') })
+
+  $('adm-open').addEventListener('click', ()=>{ const idx = Number($('adm-campaign-list').value); const c = campaigns[idx]; if(isNaN(idx) || !c) return alert('Selecione campanha'); $('adm-details').classList.remove('hidden'); $('adm-camp-name').innerText = c.name; const soldCountEl = $('adm-sold-count'); if(soldCountEl) soldCountEl.innerText = (c.sales||[]).length; renderAdminSalesTable(idx); renderAdminPending(); })
+
+  function renderAdminSalesTable(idx){ const c = campaigns[idx]; const tbody = $('adm-sales-body'); if(!tbody) return; tbody.innerHTML=''; (c.sales||[]).forEach((s,i)=>{ const tr = document.createElement('tr'); const tdn=document.createElement('td'); tdn.innerText = s.number; const tdb=document.createElement('td'); tdb.innerText = s.buyer; const tdw=document.createElement('td'); tdw.innerText = s.whats||'—'; const tdp=document.createElement('td'); tdp.innerText = 'R$'+money(s.price||c.price); const tdstatus=document.createElement('td'); tdstatus.innerText = s.status; const tdact=document.createElement('td'); const payBtn = document.createElement('button'); payBtn.innerText='Marcar PAGO'; payBtn.className='btn'; payBtn.onclick = ()=>{ s.status='pago'; save(); renderAdminSalesTable(idx); renderClientCampaigns(); renderClientCart(); alert('Marcado como PAGO. Número bloqueado permanentemente.'); }; const pendBtn = document.createElement('button'); pendBtn.innerText='Marcar PENDENTE'; pendBtn.onclick = ()=>{ s.status='pendente'; save(); renderAdminSalesTable(idx); renderClientCampaigns(); renderClientCart(); }; const cancelBtn = document.createElement('button'); cancelBtn.innerText='CANCELAR'; cancelBtn.onclick = ()=>{ if(!confirm('Cancelar venda? Isso libera o número.')) return; s.status='cancelado'; save(); renderAdminSalesTable(idx); renderClientCampaigns(); renderClientCart(); }; tdact.appendChild(payBtn); tdact.appendChild(pendBtn); tdact.appendChild(cancelBtn); tr.appendChild(tdn); tr.appendChild(tdb); tr.appendChild(tdw); tr.appendChild(tdp); tr.appendChild(tdstatus); tr.appendChild(tdact); tbody.appendChild(tr); }); const soldCountEl = $('adm-sold-count'); if(soldCountEl) soldCountEl.innerText = (c.sales||[]).filter(x=>x.status==='pago').length; const lastWinnerEl = $('adm-last-winner'); if(lastWinnerEl) lastWinnerEl.innerText = c.lastWinner ? (c.lastWinner.number + ' — ' + (c.lastWinner.buyer||'—')) : '--'; }
+
+  $('adm-export').addEventListener('click', ()=>{ const idx = Number($('adm-campaign-list').value); const c = campaigns[idx]; if(!c) return alert('Selecione campanha'); let csv='numero,comprador,whats,status\n'; (c.sales||[]).forEach(s=>{ csv += `${s.number},${s.buyer || ''},${s.whats||''},${s.status}
+` }); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download = (c.name.replace(/[^a-z0-9]/gi,'_')||'vendas')+'.csv'; a.click(); URL.revokeObjectURL(url); })
+
+  $('adm-delete').addEventListener('click', ()=>{ const idx=Number($('adm-campaign-list').value); if(isNaN(idx)) return alert('Selecione'); if(!confirm('Excluir campanha?')) return; campaigns.splice(idx,1); save(); renderAdminCampaignList(); renderClientCampaigns(); alert('Removido') })
+
+  $('adm-draw').addEventListener('click', ()=>{ const idx = Number($('adm-campaign-list').value); const c = campaigns[idx]; if(!c) return alert('Selecione campanha'); const paid = (c.sales||[]).filter(s=>s.status==='pago'); if(paid.length===0) return alert('Sem números pagos para sortear'); const winner = paid[Math.floor(Math.random()*paid.length)]; c.lastWinner = {number:winner.number,buyer:winner.buyer}; save(); renderAdminSalesTable(idx); alert('Sorteado: '+winner.number+' — '+(winner.buyer||'—')); })
+
+  /* ======================== RENDER PENDENTES DO ANUNCIANTE ======================== */
+  function renderAdminPending(){ const list = $('admin-pending-list'); const wrapper = $('admin-pending'); if(!list || !wrapper) return; list.innerHTML=''; const hasPending = campaigns.some(c => (c.sales||[]).some(s => s.status==='pendente')); if(!hasPending) { wrapper.classList.add('hidden'); return; } wrapper.classList.remove('hidden'); campaigns.forEach((c,ci)=>{ (c.sales||[]).forEach((s,si)=>{ if(s.status==='pendente'){ const li=document.createElement('li'); li.style.margin='8px 0'; li.innerHTML = `Campanha: <b>${c.name}</b> — Cliente: <b>${s.buyer||'—'}</b> — Nº ${s.number} — R$${s.price} `; const payBtn = document.createElement('button'); payBtn.textContent='Marcar PAGO'; payBtn.style.marginLeft='8px'; payBtn.dataset.ci=ci; payBtn.dataset.si=si; payBtn.className='mark-paid'; const cancelBtn = document.createElement('button'); cancelBtn.textContent='Cancelar'; cancelBtn.style.marginLeft='6px'; cancelBtn.dataset.ci=ci; cancelBtn.dataset.si=si; cancelBtn.className='mark-cancel'; li.appendChild(payBtn); li.appendChild(cancelBtn); list.appendChild(li); } }); });
+    list.querySelectorAll('.mark-paid').forEach(btn=>{ btn.onclick = ()=>{ const ci = Number(btn.dataset.ci); const si = Number(btn.dataset.si); campaigns[ci].sales[si].status='pago'; save(); renderAdminPending(); renderAdminSalesTable(ci); renderClientCart(); }; });
+    list.querySelectorAll('.mark-cancel').forEach(btn=>{ btn.onclick = ()=>{ const ci = Number(btn.dataset.ci); const si = Number(btn.dataset.si); if(!confirm('Cancelar compra?')) return; campaigns[ci].sales[si].status='cancelado'; save(); renderAdminPending(); renderAdminSalesTable(ci); renderClientCart(); }; });
+  }
+
+  /* ----------------------------- ACCOUNT EDIT (admin) ----------------------------- */
+  $('admin-edit-account').addEventListener('click', ()=>{
+    const u = users.find(x=>x.id===currentAdminId);
+    if(!u) return alert('Nenhum anunciante logado');
+    const email = prompt('Email (vazio para manter):', u.email||'') || '';
+    const phone = prompt('Telefone (vazio para manter):', u.phone||'') || '';
+    const change = confirm('Deseja alterar a senha?');
+    if(change){ const newpw = prompt('Nova senha (mín 6 caracteres):',''); if(newpw && newpw.length>=6){ deriveHash(newpw, randBytes(12)).then(h=>{ u.salt = randBytes(12); deriveHash(newpw,u.salt).then(hash=>{ u.passwordHash = hash; u.email = email||u.email; u.phone = phone||u.phone; saveUsers(); alert('Dados atualizados'); }) }) } else alert('Senha inválida'); } else { u.email = email||u.email; u.phone = phone||u.phone; saveUsers(); alert('Dados atualizados'); }
+  });
+
+  /* ----------------------------- BOOTSTRAP ----------------------------- */
+  function bootstrap(){ renderClientCampaigns(); renderAdminCampaignList(); renderResultList(); renderClientCart(); 
+    if(currentAdminId){ const u = users.find(x=>x.id===currentAdminId); if(u){ $('admin-logged-as').innerText = u.email || u.phone || u.id; } }
+    showPage('page-client'); }
+  bootstrap();
+  </script>
+</body>
+</html>
